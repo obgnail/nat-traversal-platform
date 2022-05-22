@@ -5,6 +5,7 @@ import (
 	"github.com/juju/errors"
 	log "github.com/sirupsen/logrus"
 	"io"
+	"strings"
 	"sync"
 	"time"
 )
@@ -342,7 +343,7 @@ func (srv *CommonServer) process(clientConn *Conn) {
 		msg, err := clientConn.ReadMessage()
 		if err != nil {
 			log.Warn(errors.ErrorStack(errors.Trace(err)))
-			if err == io.EOF {
+			if err == io.EOF || strings.Contains(err.Error(), "connection reset by peer") {
 				log.Infof("GroupName [%srv], client is dead!", srv.Name)
 				srv.delGroupByConn(clientConn)
 			}

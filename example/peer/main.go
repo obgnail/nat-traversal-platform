@@ -12,5 +12,5 @@ func main() {
 		{Name: "HTTP", LocalPort: 7777, Password: "password2"},
 	}
 
-	frp.NewClient(groupName, 5555, "127.0.0.1", serverPort, wantToProxyApps).Run()
+	frp.NewClient(groupName, 5555, "192.168.3.5", serverPort, wantToProxyApps).Run()
 }
