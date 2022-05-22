@@ -4,6 +4,7 @@ import (
 	"github.com/juju/errors"
 	log "github.com/sirupsen/logrus"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -157,7 +158,7 @@ func (clt *ProxyClient) Run() {
 		msg, err := conn.ReadMessage()
 		if err != nil {
 			log.Warn(errors.ErrorStack(errors.Trace(err)))
-			if err == io.EOF {
+			if err == io.EOF || strings.Contains(err.Error(), "use of closed network connection") {
 				log.Infof("GroupName [%s], client is dead!", clt.GroupName)
 				return
 			}
