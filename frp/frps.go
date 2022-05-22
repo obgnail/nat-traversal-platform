@@ -189,6 +189,7 @@ func (srv *CommonServer) groups() {
 			log.Infof("[%s]:\t %s", app.name, conn)
 		}
 	}
+	log.Info("---------------------------------")
 }
 
 func (srv *CommonServer) RegisterGroup(groupName string, apps []*AppInfo) {
@@ -203,6 +204,7 @@ func (srv *CommonServer) RegisterGroup(groupName string, apps []*AppInfo) {
 }
 
 func (srv *CommonServer) delGroup(groupName string) {
+	log.Infof("del group: %s", groupName)
 	srv.inUseLock.Lock()
 	defer srv.inUseLock.Unlock()
 
@@ -213,8 +215,6 @@ func (srv *CommonServer) delGroup(groupName string) {
 	group.Close()
 	delete(srv.inUseGroup, groupName)
 	delete(srv.inUseConn, group.clientConn)
-
-	srv.groups()
 }
 
 func (srv *CommonServer) delGroupByConn(conn *Conn) {
@@ -283,7 +283,6 @@ func (srv *CommonServer) checkGroup(clientConn *Conn, msg *Message) (*appGroup, 
 	srv.inUseGroup[group.name] = group
 	srv.inUseConn[group.clientConn] = group
 	srv.inUseLock.Unlock()
-
 	return group, nil
 }
 
@@ -294,6 +293,7 @@ func (srv *CommonServer) initGroup(clientConn *Conn, msg *Message) {
 		srv.delGroup(group.name)
 		return
 	}
+	log.Infof("group inited: %s", group.name)
 
 	// 代理具体服务
 	go group.startProxyApp()
