@@ -218,6 +218,9 @@ func (srv *CommonServer) delGroup(groupName string) {
 }
 
 func (srv *CommonServer) delGroupByConn(conn *Conn) {
+	if conn == nil {
+		return
+	}
 	group, ok := srv.inUseConn[conn]
 	if !ok {
 		conn.Close()
@@ -262,7 +265,7 @@ func (srv *CommonServer) checkGroup(clientConn *Conn, msg *Message) (*appGroup, 
 	for _, mApp := range infoFromMsg.Apps {
 		pAPP, ok := infoFromPool.Apps[mApp.Name]
 		if !ok {
-			return nil, fmt.Errorf("no such app: %srv", mApp.Name)
+			return nil, fmt.Errorf("no such app: %s", mApp.Name)
 		}
 		if mApp.Password != pAPP.Password {
 			return nil, InvalidPasswordError(mApp.Name)
@@ -308,20 +311,22 @@ func (srv *CommonServer) initGroup(clientConn *Conn, msg *Message) {
 	go func() {
 		for {
 			select {
-			case <-group.heartbeatChan:
-				log.Debug("received heartbeat msg from", clientConn.GetRemoteAddr())
-				resp := NewMessage(TypeServerHeartbeat, "", srv.Name, nil)
-				err := clientConn.SendMessage(resp)
-				if err != nil {
-					log.Warn(SendHeartbeatMessageError())
-					log.Warn(errors.ErrorStack(errors.Trace(err)))
-					return
+			case _, ok := <-group.heartbeatChan:
+				if ok {
+					log.Debug("received heartbeat msg from", clientConn.GetRemoteAddr())
+					resp := NewMessage(TypeServerHeartbeat, "", srv.Name, nil)
+					if err := clientConn.SendMessage(resp); err != nil {
+						log.Warn(SendHeartbeatMessageError())
+						log.Warn(errors.ErrorStack(errors.Trace(err)))
+						return
+					}
 				}
+				log.Warnf("GroupName [%s], user conn [%s] Heartbeat close", srv.Name, clientConn.GetRemoteAddr())
+				srv.delGroupByConn(clientConn)
+				return
 			case <-time.After(HeartbeatTimeout):
-				log.Warnf("GroupName [%srv], user conn [%srv] ErrArgHeartbeat timeout", srv.Name, clientConn.GetRemoteAddr())
-				if clientConn != nil {
-					srv.delGroup(group.name)
-				}
+				log.Warnf("GroupName [%s], user conn [%s] Heartbeat timeout", srv.Name, clientConn.GetRemoteAddr())
+				srv.delGroupByConn(clientConn)
 				return
 			}
 		}
@@ -344,7 +349,7 @@ func (srv *CommonServer) process(clientConn *Conn) {
 		if err != nil {
 			log.Warn(errors.ErrorStack(errors.Trace(err)))
 			if err == io.EOF || strings.Contains(err.Error(), "connection reset by peer") {
-				log.Infof("GroupName [%srv], client is dead!", srv.Name)
+				log.Infof("GroupName [%s], client is dead!", srv.Name)
 				srv.delGroupByConn(clientConn)
 			}
 			return
