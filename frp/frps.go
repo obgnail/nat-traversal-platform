@@ -320,10 +320,11 @@ func (srv *CommonServer) initGroup(clientConn *Conn, msg *Message) {
 						log.Warn(errors.ErrorStack(errors.Trace(err)))
 						return
 					}
+				} else {
+					log.Warnf("GroupName [%s], user conn [%s] Heartbeat close", srv.Name, clientConn.GetRemoteAddr())
+					srv.delGroupByConn(clientConn)
+					return
 				}
-				log.Warnf("GroupName [%s], user conn [%s] Heartbeat close", srv.Name, clientConn.GetRemoteAddr())
-				srv.delGroupByConn(clientConn)
-				return
 			case <-time.After(HeartbeatTimeout):
 				log.Warnf("GroupName [%s], user conn [%s] Heartbeat timeout", srv.Name, clientConn.GetRemoteAddr())
 				srv.delGroupByConn(clientConn)
